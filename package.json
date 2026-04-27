@@ -1,0 +1,12 @@
+{
+  "name": "purrfect-retro-xms",
+  "version": "1.0.0",
+  "description": "Purrfect Retro — Sprint retrospective app",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

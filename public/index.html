@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Purrfect Retro - XMS 🐱</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: radial-gradient(ellipse at 40% 0%, #1e0a3c 0%, #0e0618 70%);
+    font-family: 'DM Sans', sans-serif;
+    color: #f0e6ff;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Ctext y='40' font-size='28'%3E🐾%3C/text%3E%3C/svg%3E");
+    background-size: 60px 60px;
+  }
+  #root { position: relative; z-index: 1; }
+  input::placeholder { color: rgba(240,230,255,0.22); }
+  input:focus { outline: none; border-color: rgba(201,160,245,0.5) !important; }
+  button:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-1px); transition: all 0.15s; }
+  button:active:not(:disabled) { transform: translateY(0); }
+  button { transition: all 0.15s; }
+  .retro-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .retro-table th {
+    text-align: left; padding: 12px 16px;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: rgba(240,230,255,0.35); border-bottom: 1px solid rgba(201,160,245,0.12);
+    font-family: 'DM Sans', sans-serif; font-weight: 600;
+  }
+  .retro-table td { padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: top; line-height: 1.5; }
+  .retro-table tbody tr:last-child td { border-bottom: none; }
+  .retro-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+  .name-cell { font-weight: 600; color: #c9a0f5; font-size: 13px; white-space: nowrap; }
+  .start-cell { color: #6fcf97; }
+  .stop-cell  { color: #eb5757; }
+  .keep-cell  { color: #f4a261; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(14px) } to { opacity:1; transform:translateY(0) } }
+  @keyframes popIn  { from { opacity:0; transform:scale(0.94) }       to { opacity:1; transform:scale(1) } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+async function loadSubmissions() {
+  try {
+    const res = await fetch("/api/submissions");
+    return await res.json();
+  } catch { return []; }
+}
+
+async function saveSubmissions(submissions) {
+  try {
+    await fetch("/api/submissions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(submissions),
+    });
+  } catch (e) { console.error("Save failed", e); }
+}
+
+const card = (extra = {}) => ({
+  background: "rgba(255,255,255,0.04)",
+  border: "1px solid rgba(201,160,245,0.12)",
+  borderRadius: 16,
+  padding: "20px 24px",
+  ...extra,
+});
+
+const inp = (extra = {}) => ({
+  width: "100%",
+  background: "rgba(255,255,255,0.06)",
+  border: "1px solid rgba(201,160,245,0.18)",
+  borderRadius: 10,
+  padding: "10px 14px",
+  color: "#f0e6ff",
+  fontSize: 14,
+  fontFamily: "'DM Sans', sans-serif",
+  ...extra,
+});
+
+const btn = (variant = "primary") => {
+  const base = { padding: "11px 22px", borderRadius: 10, border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", letterSpacing: 0.2 };
+  if (variant === "primary") return { ...base, background: "linear-gradient(135deg,#c9621e,#f4a261)", color: "#1a0805" };
+  if (variant === "purple")  return { ...base, background: "rgba(201,160,245,0.12)", border: "1px solid rgba(201,160,245,0.25)", color: "#c9a0f5" };
+  if (variant === "ghost")   return { ...base, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(240,230,255,0.7)" };
+  if (variant === "danger")  return { ...base, background: "rgba(235,87,87,0.1)", border: "1px solid rgba(235,87,87,0.25)", color: "#eb5757" };
+  return base;
+};
+
+const SECTIONS = [
+  { key: "startDoing", label: "Start Doing", emoji: "🟢", accent: "#6fcf97", bg: "rgba(111,207,151,0.05)", border: "rgba(111,207,151,0.2)", placeholder: "What should we start doing?" },
+  { key: "stopDoing",  label: "Stop Doing",  emoji: "🔴", accent: "#eb5757", bg: "rgba(235,87,87,0.05)",  border: "rgba(235,87,87,0.2)",  placeholder: "What should we stop doing?" },
+  { key: "keepDoing",  label: "Keep Doing",  emoji: "💛", accent: "#f4a261", bg: "rgba(244,162,97,0.05)", border: "rgba(244,162,97,0.2)", placeholder: "What should we keep doing?" },
+];
+
+const FOOTER = (
+  <p style={{ color: "rgba(240,230,255,0.18)", fontSize: 11, textAlign: "center", marginTop: 32, letterSpacing: 0.5 }}>
+    v1 - Created by Greg Clayton 🐾
+  </p>
+);
+
+function RetroSection({ section, items, onChange }) {
+  const { label, emoji, accent, bg, border, placeholder } = section;
+  const updateItem = (i, val) => { const n = [...items]; n[i] = val; onChange(n); };
+  const addItem    = () => onChange([...items, ""]);
+  const removeItem = (i) => onChange(items.filter((_, j) => j !== i));
+  return (
+    <div style={card({ background: bg, borderColor: border, marginBottom: 14 })}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+        <span style={{ fontSize: 18 }}>{emoji}</span>
+        <span style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: accent, fontWeight: 600 }}>{label}</span>
+      </div>
+      {items.map((item, i) => (
+        <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}>
+          <input value={item} onChange={e => updateItem(i, e.target.value)} placeholder={placeholder} style={inp({ flex: 1, borderColor: border })} />
+          {items.length > 1 && (
+            <button onClick={() => removeItem(i)} style={{ ...btn("ghost"), padding: "10px 12px", color: "rgba(240,230,255,0.35)", fontSize: 13, flexShrink: 0 }}>✕</button>
+          )}
+        </div>
+      ))}
+      <button onClick={addItem} style={{ ...btn("ghost"), fontSize: 12, padding: "7px 14px", marginTop: 4, color: accent, borderColor: border, background: "transparent" }}>
+        + Add New Line
+      </button>
+    </div>
+  );
+}
+
+// ── HOME ───────────────────────────────────────────────────────────────────────
+function HomeScreen({ onConfirm, onViewSummary }) {
+  const [name, setName] = useState("");
+  return (
+    <div style={{ maxWidth: 440, margin: "0 auto", padding: "60px 24px 40px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <div style={{ fontSize: 60, textAlign: "center", marginBottom: 6, filter: "drop-shadow(0 0 18px rgba(244,162,97,0.4))" }}>🐱</div>
+      <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: 44, background: "linear-gradient(135deg,#f4a261,#e76f51)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", lineHeight: 1, textAlign: "center" }}>
+        Purrfect
+      </div>
+      <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: 26, color: "#c9a0f5", letterSpacing: 3, textTransform: "uppercase", textAlign: "center", margin: "4px 0 6px" }}>Retro - XMS</div>
+      <p style={{ color: "rgba(240,230,255,0.35)", fontSize: 13, textAlign: "center", marginBottom: 36 }}>Reflect, review, and improve 🐾</p>
+      <div style={{ ...card(), width: "100%", marginBottom: 12, animation: "fadeUp 0.3s ease both" }}>
+        <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#c9a0f5", marginBottom: 10, fontWeight: 600 }}>Your Name 🐾</div>
+        <input value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === "Enter" && name.trim() && onConfirm(name.trim())} placeholder="e.g. Whiskers McGee" style={inp({ marginBottom: 12 })} autoFocus />
+        <button onClick={() => name.trim() && onConfirm(name.trim())} disabled={!name.trim()} style={{ ...btn("primary"), width: "100%", opacity: name.trim() ? 1 : 0.45, cursor: name.trim() ? "pointer" : "not-allowed" }}>
+          Confirm &amp; Start ✓
+        </button>
+      </div>
+      <button onClick={onViewSummary} style={{ ...btn("purple"), width: "100%", animation: "fadeUp 0.35s 0.05s ease both" }}>📋 View Summary</button>
+      {FOOTER}
+    </div>
+  );
+}
+
+// ── FORM ───────────────────────────────────────────────────────────────────────
+function FormScreen({ userName, onBack, onSubmitted }) {
+  const [entries, setEntries]     = useState({ startDoing: [""], stopDoing: [""], keepDoing: [""] });
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone]           = useState(false);
+
+  const setSection = (key) => (val) => setEntries(e => ({ ...e, [key]: val }));
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    const current = await loadSubmissions();
+    const existing = current.find(s => s.name.toLowerCase() === userName.toLowerCase());
+    const merged = {
+      id:         existing ? existing.id : Date.now().toString(),
+      name:       existing ? existing.name : userName,
+      startDoing: [...(existing?.startDoing || []), ...entries.startDoing.filter(s => s.trim())],
+      stopDoing:  [...(existing?.stopDoing  || []), ...entries.stopDoing.filter(s => s.trim())],
+      keepDoing:  [...(existing?.keepDoing  || []), ...entries.keepDoing.filter(s => s.trim())],
+      timestamp:  new Date().toISOString(),
+    };
+    const filtered = current.filter(s => s.name.toLowerCase() !== userName.toLowerCase());
+    const updated  = [...filtered, merged].sort((a, b) => a.name.localeCompare(b.name));
+    await saveSubmissions(updated);
+    setSubmitting(false);
+    setDone(true);
+  };
+
+  const handleAddMore = () => { setEntries({ startDoing: [""], stopDoing: [""], keepDoing: [""] }); setDone(false); };
+
+  return (
+    <div style={{ maxWidth: 580, margin: "0 auto", padding: "36px 24px 60px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
+        <button onClick={onBack} style={{ ...btn("ghost"), padding: "8px 14px", fontSize: 12, flexShrink: 0 }}>← Back</button>
+        <div>
+          <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: 21, color: "#f4a261" }}>Sprint Retrospective - XMS</div>
+          <div style={{ fontSize: 12, color: "rgba(240,230,255,0.35)", marginTop: 1 }}>Submitting as: <span style={{ color: "#c9a0f5" }}>{userName}</span></div>
+        </div>
+      </div>
+
+      {done ? (
+        <div style={{ ...card(), textAlign: "center", padding: "48px 32px", animation: "popIn 0.3s ease both" }}>
+          <div style={{ fontSize: 52, marginBottom: 14 }}>🎉</div>
+          <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: 24, color: "#f4a261", marginBottom: 8 }}>Purrfectly Submitted!</div>
+          <p style={{ color: "rgba(240,230,255,0.45)", fontSize: 14, marginBottom: 28, lineHeight: 1.6 }}>Your retro responses have been saved and are visible to the whole team.</p>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+            <button onClick={handleAddMore} style={btn("purple")}>+ Add More Responses</button>
+            <button onClick={onSubmitted}   style={btn("primary")}>📋 View Summary</button>
+            <button onClick={onBack}        style={btn("ghost")}>Back to Home</button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {SECTIONS.map(section => (
+            <RetroSection key={section.key} section={section} items={entries[section.key]} onChange={setSection(section.key)} />
+          ))}
+          <button onClick={handleSubmit} disabled={submitting} style={{ ...btn("primary"), width: "100%", padding: "14px 24px", fontSize: 15, marginTop: 8, opacity: submitting ? 0.6 : 1 }}>
+            {submitting ? "Submitting..." : "Submit Responses 🐾"}
+          </button>
+        </>
+      )}
+      {FOOTER}
+    </div>
+  );
+}
+
+// ── SUMMARY ────────────────────────────────────────────────────────────────────
+function SummaryScreen({ onBack }) {
+  const [submissions,   setSubmissions]   = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [showClearModal,setShowClearModal]= useState(false);
+  const [clearPassword, setClearPassword] = useState("");
+  const [clearError,    setClearError]    = useState(false);
+  const [clearSuccess,  setClearSuccess]  = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editEntries,   setEditEntries]   = useState({ startDoing: [], stopDoing: [], keepDoing: [] });
+  const [editSaving,    setEditSaving]    = useState(false);
+  const [activeUser,    setActiveUser]    = useState("");
+  const [nameInput,     setNameInput]     = useState("");
+  const [nameError,     setNameError]     = useState(false);
+
+  const refresh = async () => { setLoading(true); setSubmissions(await loadSubmissions()); setLoading(false); };
+  useEffect(() => { refresh(); }, []);
+
+  const confirmIdentity = () => {
+    const match = submissions.find(s => s.name.toLowerCase() === nameInput.trim().toLowerCase());
+    if (!match) { setNameError(true); return; }
+    setActiveUser(match.name); setNameError(false); setNameInput("");
+  };
+
+  const openClearModal = () => { setClearPassword(""); setClearError(false); setClearSuccess(false); setShowClearModal(true); };
+
+  const handleClear = async () => {
+    if (clearPassword !== "webship") { setClearError(true); setClearPassword(""); return; }
+    await saveSubmissions([]);
+    setClearSuccess(true); setSubmissions([]);
+    setTimeout(() => { setShowClearModal(false); setClearSuccess(false); }, 1400);
+  };
+
+  const openEditModal = () => {
+    const mine = submissions.find(s => s.name.toLowerCase() === activeUser.toLowerCase());
+    if (!mine) return;
+    setEditEntries({
+      startDoing: mine.startDoing.length ? [...mine.startDoing] : [""],
+      stopDoing:  mine.stopDoing.length  ? [...mine.stopDoing]  : [""],
+      keepDoing:  mine.keepDoing.length  ? [...mine.keepDoing]  : [""],
+    });
+    setShowEditModal(true);
+  };
+
+  const saveEdits = async () => {
+    setEditSaving(true);
+    const current  = await loadSubmissions();
+    const existing = current.find(s => s.name.toLowerCase() === activeUser.toLowerCase());
+    const updated  = current.map(s => s.name.toLowerCase() !== activeUser.toLowerCase() ? s : {
+      ...existing,
+      startDoing: editEntries.startDoing.filter(v => v.trim()),
+      stopDoing:  editEntries.stopDoing.filter(v => v.trim()),
+      keepDoing:  editEntries.keepDoing.filter(v => v.trim()),
+      timestamp:  new Date().toISOString(),
+    });
+    await saveSubmissions(updated);
+    setSubmissions(updated);
+    setEditSaving(false);
+    setShowEditModal(false);
+  };
+
+  const editSection = (key) => (val) => setEditEntries(e => ({ ...e, [key]: val }));
+
+  const exportCSV = () => {
+    const rows = [["Name","Start Doing","Stop Doing","Keep Doing"]];
+    for (const sub of submissions) {
+      const maxLen = Math.max(sub.startDoing.length, sub.stopDoing.length, sub.keepDoing.length, 1);
+      for (let i = 0; i < maxLen; i++) {
+        rows.push([i === 0 ? sub.name : "", sub.startDoing[i] || "", sub.stopDoing[i] || "", sub.keepDoing[i] || ""]);
+      }
+    }
+    const esc = v => `"${String(v).replace(/"/g,'""')}"`;
+    const csv = rows.map(r => r.map(esc).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+    const a   = Object.assign(document.createElement("a"), { href: url, download: `retrospective_${new Date().toISOString().slice(0,10)}.csv` });
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div style={{ maxWidth: 940, margin: "0 auto", padding: "36px 24px 60px" }}>
+
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28, gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <button onClick={onBack} style={{ ...btn("ghost"), padding: "8px 14px", fontSize: 12 }}>← Back</button>
+          <div>
+            <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: 22, color: "#f4a261" }}>Retro Summary - XMS</div>
+            <div style={{ fontSize: 12, color: "rgba(240,230,255,0.35)", marginTop: 1 }}>
+              {loading ? "Loading..." : `${submissions.length} response${submissions.length !== 1 ? "s" : ""} submitted`}
+            </div>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button onClick={refresh} style={{ ...btn("ghost"), fontSize: 13 }}>↻ Refresh</button>
+          <button onClick={exportCSV} disabled={submissions.length === 0} style={{ ...btn("primary"), opacity: submissions.length === 0 ? 0.45 : 1 }}>⬇ Export CSV</button>
+          <button onClick={openClearModal} disabled={submissions.length === 0} style={{ ...btn("danger"), opacity: submissions.length === 0 ? 0.4 : 1 }}>🗑 Clear All</button>
+        </div>
+      </div>
+
+      {/* Clear modal */}
+      {showClearModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ ...card({ padding: "32px 28px", maxWidth: 380, width: "100%", background: "#130923", borderColor: "rgba(235,87,87,0.3)" }), animation: "popIn 0.25s ease both" }}>
+            {clearSuccess ? (
+              <div style={{ textAlign: "center", padding: "12px 0" }}>
+                <div style={{ fontSize: 40, marginBottom: 10 }}>✅</div>
+                <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: 18, color: "#6fcf97" }}>Summary Cleared!</div>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#eb5757", fontWeight: 600, marginBottom: 6 }}>🔐 Admin Access Required</div>
+                <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: 20, color: "#f0e6ff", marginBottom: 6 }}>Clear All Responses?</div>
+                <p style={{ fontSize: 13, color: "rgba(240,230,255,0.4)", marginBottom: 20, lineHeight: 1.6 }}>This will permanently remove all submitted retro responses. Enter the admin password to confirm.</p>
+                <div style={{ fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", color: "rgba(240,230,255,0.35)", marginBottom: 8, fontWeight: 600 }}>Password</div>
+                <input type="password" value={clearPassword} onChange={e => { setClearPassword(e.target.value); setClearError(false); }} onKeyDown={e => e.key === "Enter" && handleClear()} placeholder="Enter admin password" autoFocus style={inp({ marginBottom: clearError ? 8 : 16, borderColor: clearError ? "rgba(235,87,87,0.6)" : "rgba(201,160,245,0.18)" })} />
+                {clearError && <div style={{ fontSize: 12, color: "#eb5757", marginBottom: 14 }}>⚠ Incorrect password. Please try again.</div>}
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => setShowClearModal(false)} style={{ ...btn("ghost"), flex: 1 }}>Cancel</button>
+                  <button onClick={handleClear} style={{ ...btn("danger"), flex: 1 }}>Confirm Clear</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Legend */}
+      <div style={{ display: "flex", gap: 20, marginBottom: 16, flexWrap: "wrap" }}>
+        {SECTIONS.map(s => (
+          <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: s.accent }}>
+            <span style={{ fontSize: 14 }}>{s.emoji}</span>
+            <span style={{ fontWeight: 600, letterSpacing: 0.5 }}>{s.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Identity bar */}
+      {!loading && submissions.length > 0 && (
+        <div style={{ ...card({ marginBottom: 16, padding: "14px 18px" }), display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          {activeUser ? (
+            <>
+              <span style={{ fontSize: 13, color: "rgba(240,230,255,0.4)" }}>Editing as</span>
+              <span style={{ fontSize: 13, color: "#c9a0f5", fontWeight: 600 }}>{activeUser}</span>
+              <button onClick={() => setActiveUser("")} style={{ ...btn("ghost"), fontSize: 11, padding: "4px 10px", marginLeft: "auto" }}>Change</button>
+            </>
+          ) : (
+            <>
+              <span style={{ fontSize: 13, color: "rgba(240,230,255,0.5)", whiteSpace: "nowrap" }}>Who are you?</span>
+              <input value={nameInput} onChange={e => { setNameInput(e.target.value); setNameError(false); }} onKeyDown={e => e.key === "Enter" && nameInput.trim() && confirmIdentity()} placeholder="Enter your name to edit your responses" style={inp({ flex: 1, minWidth: 200, padding: "7px 12px", fontSize: 13, borderColor: nameError ? "rgba(235,87,87,0.6)" : "rgba(201,160,245,0.18)" })} />
+              <button onClick={confirmIdentity} disabled={!nameInput.trim()} style={{ ...btn("purple"), padding: "7px 16px", fontSize: 13, opacity: nameInput.trim() ? 1 : 0.45, whiteSpace: "nowrap" }}>Confirm ✓</button>
+              {nameError && <div style={{ width: "100%", fontSize: 12, color: "#eb5757", marginTop: 2 }}>⚠ Name not found — check your spelling and try again.</div>}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Table */}
+      {loading ? (
+        <div style={{ ...card(), textAlign: "center", padding: 48 }}>
+          <div style={{ color: "rgba(240,230,255,0.35)", fontSize: 14 }}>Loading responses...</div>
+        </div>
+      ) : submissions.length === 0 ? (
+        <div style={{ ...card(), textAlign: "center", padding: 52, animation: "fadeUp 0.3s ease both" }}>
+          <div style={{ fontSize: 44, marginBottom: 12 }}>😺</div>
+          <div style={{ color: "rgba(240,230,255,0.4)", fontSize: 14 }}>No responses submitted yet. Be the first! 🐾</div>
+        </div>
+      ) : (
+        <div style={{ ...card({ padding: 0, overflow: "hidden", animation: "fadeUp 0.3s ease both" }) }}>
+          <div style={{ overflowX: "auto" }}>
+            <table className="retro-table">
+              <thead>
+                <tr>
+                  <th style={{ width: "14%", minWidth: 100 }}>Name</th>
+                  <th style={{ width: "29%", color: "#6fcf97" }}>🟢 Start Doing</th>
+                  <th style={{ width: "29%", color: "#eb5757" }}>🔴 Stop Doing</th>
+                  <th style={{ width: "28%", color: "#f4a261" }}>💛 Keep Doing</th>
+                </tr>
+              </thead>
+              <tbody>
+                {submissions.map(sub => {
+                  const isMe    = activeUser && sub.name.toLowerCase() === activeUser.toLowerCase();
+                  const maxLen  = Math.max(sub.startDoing.length, sub.stopDoing.length, sub.keepDoing.length, 1);
+                  return Array.from({ length: maxLen }, (_, i) => (
+                    <tr key={`${sub.id}-${i}`}>
+                      <td className="name-cell">
+                        {i === 0 ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span>{sub.name}</span>
+                            {isMe && (
+                              <button onClick={openEditModal} style={{ background: "rgba(201,160,245,0.1)", border: "1px solid rgba(201,160,245,0.2)", borderRadius: 6, color: "#c9a0f5", fontSize: 11, padding: "2px 8px", cursor: "pointer", whiteSpace: "nowrap", fontFamily: "'DM Sans', sans-serif" }}>✏ Edit</button>
+                            )}
+                          </div>
+                        ) : ""}
+                      </td>
+                      <td className="start-cell">{sub.startDoing[i] || ""}</td>
+                      <td className="stop-cell">{sub.stopDoing[i]  || ""}</td>
+                      <td className="keep-cell">{sub.keepDoing[i]  || ""}</td>
+                    </tr>
+                  ));
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Edit modal */}
+      {showEditModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, overflowY: "auto" }}>
+          <div style={{ ...card({ padding: "28px 24px", maxWidth: 520, width: "100%", background: "#130923", borderColor: "rgba(201,160,245,0.2)" }), animation: "popIn 0.25s ease both", maxHeight: "90vh", overflowY: "auto" }}>
+            <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "#c9a0f5", fontWeight: 600, marginBottom: 4 }}>✏ Edit My Responses</div>
+            <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: 19, color: "#f0e6ff", marginBottom: 18 }}>{activeUser}</div>
+            {SECTIONS.map(section => (
+              <RetroSection key={section.key} section={section} items={editEntries[section.key]} onChange={editSection(section.key)} />
+            ))}
+            <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+              <button onClick={() => setShowEditModal(false)} style={{ ...btn("ghost"), flex: 1 }}>Cancel</button>
+              <button onClick={saveEdits} disabled={editSaving} style={{ ...btn("primary"), flex: 1, opacity: editSaving ? 0.6 : 1 }}>
+                {editSaving ? "Saving..." : "Save Changes ✓"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {FOOTER}
+    </div>
+  );
+}
+
+// ── ROOT ───────────────────────────────────────────────────────────────────────
+function App() {
+  const [screen,   setScreen]   = useState("home");
+  const [userName, setUserName] = useState("");
+
+  const handleConfirm = name => { setUserName(name); setScreen("form"); };
+
+  if (screen === "home")    return <HomeScreen    onConfirm={handleConfirm} onViewSummary={() => setScreen("summary")} />;
+  if (screen === "form")    return <FormScreen    userName={userName} onBack={() => setScreen("home")} onSubmitted={() => setScreen("summary")} />;
+  return                           <SummaryScreen onBack={() => setScreen("home")} />;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
