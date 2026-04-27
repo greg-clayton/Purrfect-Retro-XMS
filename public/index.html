@@ -252,7 +252,7 @@ function SummaryScreen({ onBack }) {
   const openClearModal = () => { setClearPassword(""); setClearError(false); setClearSuccess(false); setShowClearModal(true); };
 
   const handleClear = async () => {
-    if (clearPassword !== "webship") { setClearError(true); setClearPassword(""); return; }
+    if (clearPassword !== "xms") { setClearError(true); setClearPassword(""); return; }
     await saveSubmissions([]);
     setClearSuccess(true); setSubmissions([]);
     setTimeout(() => { setShowClearModal(false); setClearSuccess(false); }, 1400);
