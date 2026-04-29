@@ -307,7 +307,8 @@ function SummaryScreen({ onBack }) {
         rows += `<tr><td style="${tdStyle}">${nameCell}</td><td style="${tdStyle}">${start}</td><td style="${tdStyle}">${stop}</td><td style="${tdStyle}">${keep}</td></tr>`;
       }
     }
-    const html = `<table style="border-collapse:collapse;width:100%"><thead><tr><th style="${thName}">Name</th><th style="${thStart}">Start doing</th><th style="${thStop}">Stop doing</th><th style="${thKeep}">Keep doing</th></tr></thead><tbody>${rows}</tbody></table>`;
+    const colgroup = `<colgroup><col style="width:12%"/><col style="width:29%"/><col style="width:29%"/><col style="width:30%"/></colgroup>`;
+    const html = `<table style="border-collapse:collapse;width:100%">${colgroup}<thead><tr><th style="${thName}">Name</th><th style="${thStart}">Start doing</th><th style="${thStop}">Stop doing</th><th style="${thKeep}">Keep doing</th></tr></thead><tbody>${rows}</tbody></table>`;
     try {
       await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }) })]);
       setCopied(true);
