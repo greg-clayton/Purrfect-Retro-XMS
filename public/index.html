@@ -233,6 +233,7 @@ function SummaryScreen({ onBack }) {
   const [clearPassword, setClearPassword] = useState("");
   const [clearError,    setClearError]    = useState(false);
   const [clearSuccess,  setClearSuccess]  = useState(false);
+  const [copied,        setCopied]        = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editEntries,   setEditEntries]   = useState({ startDoing: [], stopDoing: [], keepDoing: [] });
   const [editSaving,    setEditSaving]    = useState(false);
@@ -288,6 +289,34 @@ function SummaryScreen({ onBack }) {
 
   const editSection = (key) => (val) => setEditEntries(e => ({ ...e, [key]: val }));
 
+  const copyForConfluence = async () => {
+    const thBase  = `border:1px solid #ccc;padding:8px 12px;text-align:left;font-weight:bold;`;
+    const thName  = thBase + `background:#f4f5f7;`;
+    const thStart = thBase + `background:#dcfff1;`;
+    const thStop  = thBase + `background:#ffeceb;`;
+    const thKeep  = thBase + `background:#e7f9ff;`;
+    const tdStyle = `border:1px solid #ccc;padding:8px 12px;vertical-align:top;`;
+    let rows = "";
+    for (const sub of submissions) {
+      const maxLen = Math.max(sub.startDoing.length, sub.stopDoing.length, sub.keepDoing.length, 1);
+      for (let i = 0; i < maxLen; i++) {
+        const nameCell = i === 0 ? `<span style="font-weight:normal;">${sub.name}</span>` : "";
+        const start = sub.startDoing[i] || "";
+        const stop  = sub.stopDoing[i]  || "";
+        const keep  = sub.keepDoing[i]  || "";
+        rows += `<tr><td style="${tdStyle}">${nameCell}</td><td style="${tdStyle}">${start}</td><td style="${tdStyle}">${stop}</td><td style="${tdStyle}">${keep}</td></tr>`;
+      }
+    }
+    const html = `<table style="border-collapse:collapse;width:100%"><thead><tr><th style="${thName}">Name</th><th style="${thStart}">Start doing</th><th style="${thStop}">Stop doing</th><th style="${thKeep}">Keep doing</th></tr></thead><tbody>${rows}</tbody></table>`;
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }) })]);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      alert("Copy failed — please use Export CSV instead.");
+    }
+  };
+
   const exportCSV = () => {
     const rows = [["Name","Start Doing","Stop Doing","Keep Doing"]];
     for (const sub of submissions) {
@@ -317,10 +346,11 @@ function SummaryScreen({ onBack }) {
             </div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button onClick={refresh} style={{ ...btn("ghost"), fontSize: 13 }}>↻ Refresh</button>
-          <button onClick={exportCSV} disabled={submissions.length === 0} style={{ ...btn("primary"), opacity: submissions.length === 0 ? 0.45 : 1 }}>⬇ Export CSV</button>
-          <button onClick={openClearModal} disabled={submissions.length === 0} style={{ ...btn("danger"), opacity: submissions.length === 0 ? 0.4 : 1 }}>🗑 Clear All</button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <button onClick={refresh} style={{ ...btn("ghost"), fontSize: 12, padding: "7px 14px" }}>↻ Refresh</button>
+          <button onClick={exportCSV} disabled={submissions.length === 0} style={{ ...btn("primary"), fontSize: 12, padding: "7px 14px", opacity: submissions.length === 0 ? 0.45 : 1 }}>⬇ Export CSV</button>
+          <button onClick={copyForConfluence} disabled={submissions.length === 0} style={{ ...btn("purple"), fontSize: 12, padding: "7px 14px", opacity: submissions.length === 0 ? 0.45 : 1 }}>{copied ? "✓ Copied!" : "📋 Confluence"}</button>
+          <button onClick={openClearModal} disabled={submissions.length === 0} style={{ ...btn("danger"), fontSize: 12, padding: "7px 14px", opacity: submissions.length === 0 ? 0.4 : 1 }}>🗑 Clear All</button>
         </div>
       </div>
 
