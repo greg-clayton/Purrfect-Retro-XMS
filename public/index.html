@@ -291,10 +291,10 @@ function SummaryScreen({ onBack }) {
 
   const copyForConfluence = async () => {
     const thBase  = `border:1px solid #ccc;padding:8px 12px;text-align:left;font-weight:bold;`;
-    const thName  = thBase + `background:#f4f5f7;width:12%;`;
-    const thStart = thBase + `background:#dcfff1;width:29%;`;
-    const thStop  = thBase + `background:#ffeceb;width:29%;`;
-    const thKeep  = thBase + `background:#e7f9ff;width:30%;`;
+    const thName  = thBase + `background:#f4f5f7;`;
+    const thStart = thBase + `background:#dcfff1;`;
+    const thStop  = thBase + `background:#ffeceb;`;
+    const thKeep  = thBase + `background:#e7f9ff;`;
     const tdStyle = `border:1px solid #ccc;padding:8px 12px;vertical-align:top;`;
     let rows = "";
     for (const sub of submissions) {
@@ -304,11 +304,10 @@ function SummaryScreen({ onBack }) {
         const start = sub.startDoing[i] || "";
         const stop  = sub.stopDoing[i]  || "";
         const keep  = sub.keepDoing[i]  || "";
-        rows += `<tr><td style="${tdStyle}">${nameCell}</td><td style="${tdStyle}">${start}</td><td style="${tdStyle}">${stop}</td><td style="${tdStyle}">${keep}</td></tr>`;
+        rows += `<tr><td width="12%" style="${tdStyle}">${nameCell}</td><td width="29%" style="${tdStyle}">${start}</td><td width="29%" style="${tdStyle}">${stop}</td><td width="30%" style="${tdStyle}">${keep}</td></tr>`;
       }
     }
-    const colgroup = `<colgroup><col style="width:12%"/><col style="width:29%"/><col style="width:29%"/><col style="width:30%"/></colgroup>`;
-    const html = `<table style="border-collapse:collapse;width:100%">${colgroup}<thead><tr><th style="${thName}">Name</th><th style="${thStart}">Start doing</th><th style="${thStop}">Stop doing</th><th style="${thKeep}">Keep doing</th></tr></thead><tbody>${rows}</tbody></table>`;
+    const html = `<table style="border-collapse:collapse;width:100%"><thead><tr><th width="12%" style="${thName}">Name</th><th width="29%" style="${thStart}">Start doing</th><th width="29%" style="${thStop}">Stop doing</th><th width="30%" style="${thKeep}">Keep doing</th></tr></thead><tbody>${rows}</tbody></table>`;
     try {
       await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }) })]);
       setCopied(true);
