@@ -291,10 +291,10 @@ function SummaryScreen({ onBack }) {
 
   const copyForConfluence = async () => {
     const thBase  = `border:1px solid #ccc;padding:8px 12px;text-align:left;font-weight:bold;`;
-    const thName  = thBase + `background:#f4f5f7;`;
-    const thStart = thBase + `background:#dcfff1;`;
-    const thStop  = thBase + `background:#ffeceb;`;
-    const thKeep  = thBase + `background:#e7f9ff;`;
+    const thName  = thBase + `background:#f4f5f7;width:12%;`;
+    const thStart = thBase + `background:#dcfff1;width:29%;`;
+    const thStop  = thBase + `background:#ffeceb;width:29%;`;
+    const thKeep  = thBase + `background:#e7f9ff;width:30%;`;
     const tdStyle = `border:1px solid #ccc;padding:8px 12px;vertical-align:top;`;
     let rows = "";
     for (const sub of submissions) {
